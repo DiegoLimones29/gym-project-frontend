@@ -3,17 +3,17 @@ import { useAuth } from '../features/auth/AuthContext';
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
-  const role = user?.role ?? 'member';
+  const role = user?.roleId === 7 ? 'admin' : (user?.role ?? 'worker');
 
   const navItems = [
-    { to: '/dashboard', label: 'Resumen', end: true, roles: ['admin', 'worker', 'member'] },
+    { to: '/dashboard', label: 'Resumen', end: true, roles: ['admin', 'worker'] },
     { to: '/dashboard/register', label: 'Registrar Usuario', roles: ['admin', 'worker'] },
     { to: '/dashboard/members', label: 'Miembros', roles: ['admin', 'worker'] },
     { to: '/dashboard/workers', label: 'Trabajadores', roles: ['admin'] },
-    { to: '/dashboard/plans', label: 'Planes y Suscripciones', roles: ['admin', 'worker', 'member'] },
-    { to: '/dashboard/classes', label: 'Clases y Horarios', roles: ['admin', 'worker', 'member'] },
-    { to: '/dashboard/workouts', label: 'Rutinas y Ejercicios', roles: ['admin', 'worker', 'member'] },
-    { to: '/dashboard/assessments', label: 'Evaluaciones Físicas', roles: ['admin', 'worker', 'member'] },
+    { to: '/dashboard/plans', label: 'Planes y Suscripciones', roles: ['admin', 'worker'] },
+    { to: '/dashboard/classes', label: 'Clases y Horarios', roles: ['admin', 'worker'] },
+    { to: '/dashboard/workouts', label: 'Rutinas y Ejercicios', roles: ['admin', 'worker'] },
+    { to: '/dashboard/assessments', label: 'Evaluaciones Físicas', roles: ['admin', 'worker'] },
   ];
 
   const visibleItems = navItems.filter((item) => item.roles.includes(role));

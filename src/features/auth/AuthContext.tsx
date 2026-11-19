@@ -9,21 +9,63 @@ interface AuthContextType {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function extractRoleName(rawRole: unknown): string {
+  if (typeof rawRole === 'string') return rawRole.toLowerCase();
+  if (rawRole && typeof rawRole === 'object' && 'role' in rawRole) {
+    return String((rawRole as { role?: string }).role ?? '').toLowerCase();
+  }
+  return '';
+}
+
+function normalizeUser(raw: any): AuthUser | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const roleStr = extractRoleName(raw.role);
+  const roleId = Number(raw.roleId ?? raw.role?.id ?? 0);
+
+  const normalizedRole =
+    roleId === 7
+      ? 'admin'
+      : roleStr === 'trainer'
+        ? 'worker'
+        : roleStr || 'worker';
+
+  return {
+    ...raw,
+    roleId,
+    role: normalizedRole,
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(() => {
+    const saved = localStorage.getItem('token');
+    return saved && saved !== 'undefined' ? saved : null;
+  });
+
   const [user, setUser] = useState<AuthUser | null>(() => {
     const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+    if (!saved || saved === 'undefined') return null;
+    try {
+      return normalizeUser(JSON.parse(saved));
+    } catch {
+      return null;
+    }
   });
 
   const login = async (credentials: LoginCredentials) => {
-    const data = await loginRequest(credentials);
-    localStorage.setItem('token', data.access_token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setToken(data.access_token);
-    setUser(data.user);
+    const response = await loginRequest(credentials);
+    const normalized = normalizeUser(response.user);
+
+    if (!response.access_token || !normalized) {
+      throw new Error('Respuesta de autenticación inválida');
+    }
+
+    localStorage.setItem('token', response.access_token);
+    localStorage.setItem('user', JSON.stringify(normalized));
+    setToken(response.access_token);
+    setUser(normalized);
   };
 
   const logout = () => {
@@ -38,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         token,
-        isAuthenticated: Boolean(token),
+        isAuthenticated: Boolean(token && user),
         login,
         logout,
       }}
@@ -49,9 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth debe usarse dentro de un AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider');
+  return ctx;
 }
