@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AuthUser, LoginCredentials, loginRequest } from './api';
 
 interface AuthContextType {
@@ -39,6 +40,8 @@ function normalizeUser(raw: any): AuthUser | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+
   const [token, setToken] = useState<string | null>(() => {
     const saved = localStorage.getItem('token');
     return saved && saved !== 'undefined' ? saved : null;
@@ -71,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    queryClient.clear();
     setToken(null);
     setUser(null);
   };
